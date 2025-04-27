@@ -1,7 +1,6 @@
-// lib/cubit/weather_cubit.dart
-
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:weather_app/models/weather_response.dart';
 
 import '../services/weather_service.dart';
 import 'weather_state.dart';
@@ -11,7 +10,7 @@ class WeatherCubit extends Cubit<WeatherState> {
 
   WeatherCubit(this._service) : super(WeatherInitial());
 
-  /// 1️⃣ Fetch by GPS
+  /// Fetch weather by GPS
   Future<void> fetchByLocation() async {
     emit(WeatherLoading());
     try {
@@ -22,17 +21,8 @@ class WeatherCubit extends Cubit<WeatherState> {
     }
   }
 
-  /// 2️⃣ Search by city name
-  Future<void> searchByCity(String cityName) async {
-    emit(WeatherLoading());
-    try {
-      await _loadWeather(cityName: cityName);
-    } catch (e) {
-      emit(WeatherError(e.toString()));
-    }
-  }
-
-  /// Shared loader for current + forecast
+  
+  /// Load weather data
   Future<void> _loadWeather({
     double? lat,
     double? lon,
@@ -44,22 +34,22 @@ class WeatherCubit extends Cubit<WeatherState> {
       cityName: cityName,
     );
 
-    final city = data['location']['name'] as String;
-    final current = data['current'];
-    final temp = (current['temp_c'] as num).toDouble();
-    final cond = current['condition']['text'] as String;
-
-    final days = _service.parseForecastDays(data);
+    final weatherResponse = WeatherResponse.fromJson(data);
 
     emit(WeatherLoaded(
-      city: city,
-      currentTemp: temp,
-      currentCondition: cond,
-      forecastDays: days,
+      weatherResponse: weatherResponse,
+      city: weatherResponse.location.name,
+      currentTemp: weatherResponse.current.tempC,
+      currentCondition: weatherResponse.current.condition.text,
+      country: weatherResponse.location.country,
+      localTime: weatherResponse.location.localtime,
+      forecastDays: _service.parseForecastDays(data),
+      currentWeather: weatherResponse.current,
+      selectedDayIndex: 0, // Add default selected day index
     ));
   }
 
-  /// 3️⃣ Select a different day from the 7‑day forecast
+  /// Select a different day from the 7‑day forecast
   void selectDay(int index) {
     final s = state;
     if (s is WeatherLoaded && index >= 0 && index < s.forecastDays.length) {
@@ -67,7 +57,7 @@ class WeatherCubit extends Cubit<WeatherState> {
     }
   }
 
-  /// Permission + GPS helper
+  /// Helper to determine GPS position
   Future<Position> _determinePosition() async {
     if (!await Geolocator.isLocationServiceEnabled()) {
       throw Exception('Location services are disabled.');

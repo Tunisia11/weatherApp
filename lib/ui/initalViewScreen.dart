@@ -14,7 +14,7 @@ class InitialView extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Header(username: "Maram "),
+          Header(cityName: "",countryName: "",),
           const SizedBox(height: 20),
        SearchBar(
             onTap: () => context.read<WeatherCubit>().fetchByLocation(),

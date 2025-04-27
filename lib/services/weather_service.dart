@@ -1,44 +1,56 @@
 // lib/services/weather_service.dart
 
-import 'package:dio/dio.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:weather_app/models/forecast.dart';
-
+import 'package:weather_app/models/location.dart';
 
 class WeatherService {
-  final Dio dio;
   final String apiKey;
 
-  WeatherService(this.dio, this.apiKey);
+  WeatherService(this.apiKey);
 
+   Future<List<Location>> getLocationSuggestions(String query) async {
+    final encodedQuery = Uri.encodeComponent(query);
+    final url = Uri.parse(
+      'https://api.weatherapi.com/v1/search.json?key=$apiKey&q=$encodedQuery'
+    );
+
+    final response = await http.get(url);
+
+    if (response.statusCode == 200) {
+      final List<dynamic> data = json.decode(response.body);
+      return data.map((json) => Location.fromJson(json)).toList();
+    } else if (response.statusCode == 400) {
+      return [];  // Return empty list for invalid queries
+    } else {
+      throw Exception('Failed to load suggestions: ${response.statusCode}');
+    }
+  }
   /// Fetches current weather + 7‑day forecast.
   Future<Map<String, dynamic>> getCurrentAndForecast({
     double? lat,
     double? lon,
     String? cityName,
-    int days = 7,
   }) async {
-    final query = cityName ?? (lat != null && lon != null ? '$lat,$lon' : '');
-    final response = await dio.get(
-      'http://api.weatherapi.com/v1/forecast.json',
-      queryParameters: {
-        'key': apiKey,
-        'q': query,
-        'days': days,
-        'aqi': 'no',
-        'alerts': 'no',
-      },
-    );
+   final query = cityName != null
+    ? 'q=${Uri.encodeComponent(cityName)}'
+    : 'q=$lat,$lon';
 
-    if (response.statusCode != 200) {
-      throw Exception('Failed to fetch weather data');
+    final url = Uri.parse(
+        'https://api.weatherapi.com/v1/forecast.json?key=$apiKey&$query&days=7');
+    final response = await http.get(url);
+
+    if (response.statusCode == 200) {
+      return json.decode(response.body);
+    } else {
+      throw Exception('Failed to load weather data');
     }
-
-    return response.data;
   }
 
-  /// Parses the forecast days out of the JSON.
-  List<ForecastDay> parseForecastDays(Map<String, dynamic> json) {
-    final list = json['forecast']['forecastday'] as List;
-    return list.map((e) => ForecastDay.fromJson(e)).toList();
-  }
+  List<ForecastDay> parseForecastDays(Map<String, dynamic> data) {
+  return (data['forecast']['forecastday'] as List)
+      .map((item) => ForecastDay.fromJson(item))
+      .toList();
+}
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:lottie/lottie.dart';
 import 'package:weather_app/ui/errorView.dart';
 import 'package:weather_app/ui/initalViewScreen.dart';
 import 'package:weather_app/ui/widgets/weatherDashbord.dart';
@@ -47,11 +48,16 @@ class LoadingView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
-      child: CircularProgressIndicator(
-        color: Color(0xFF1968E6),
-      ),
-    );
+    return Center(
+        child: Lottie.asset(
+          "assets/loading.json",
+          width: 300,
+          height: 300,
+          fit: BoxFit.fill,
+          repeat: true,
+          frameRate: FrameRate.max,
+          )
+      );
   }
 }
 
